@@ -22,6 +22,33 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
         if (sse.connected) setMessage('Live connected')
     }, [sse.connected])
 
+    // Register named event listener in addition to default onmessage handler.
+    useEffect(() => {
+        if (!sse.source) return
+        const handler = (ev: MessageEvent) => {
+            try {
+                const data = JSON.parse(ev.data)
+                onMessage?.(data)
+            } catch (e) {
+                onMessage?.(ev.data)
+            }
+        }
+
+        // listen to specific domain event
+        sse.source.addEventListener('match.finalized', handler as EventListener)
+        // keep default message listener as well
+        sse.source.addEventListener('message', handler as EventListener)
+
+        return () => {
+            try {
+                sse.source?.removeEventListener('match.finalized', handler as EventListener)
+                sse.source?.removeEventListener('message', handler as EventListener)
+            } catch (e) {
+                // ignore cleanup errors
+            }
+        }
+    }, [sse.source, onMessage])
+
     const [confirmOpen, setConfirmOpen] = useState(false)
 
     const doFinalize = async () => {
@@ -41,8 +68,21 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
                 headers,
                 body: JSON.stringify({ matchId }),
             })
-            const json = await res.json()
-            if (!res.ok) throw new Error(json.error || 'Failed')
+
+            // Try to parse JSON error body safely
+            let json: any = null
+            try {
+                json = await res.json()
+            } catch (e) {
+                // ignore non-json response
+            }
+
+            if (!res.ok) {
+                const errMsg = (json && (json.error || json.message)) || `Request failed (${res.status})`
+                throw new Error(errMsg)
+            }
+
+            // success
             setStatus('COMPLETED')
             setMessage('Finalized')
         } catch (err: any) {

@@ -15,7 +15,10 @@ export function connect() {
             controllerRef = controller
             connections.set(id, controller)
             try {
-                controller.enqueue(`event: connected\ndata: ${JSON.stringify({ id })}\n\n`)
+                const payload = { id }
+                // send both named and default message for compatibility
+                controller.enqueue(`event: connected\ndata: ${JSON.stringify(payload)}\n\n`)
+                controller.enqueue(`data: ${JSON.stringify({ type: 'connected', ...payload })}\n\n`)
             } catch (e) {
                 // ignore
             }
@@ -41,10 +44,23 @@ export function connect() {
 }
 
 export function emitSSE(event: string, payload?: any) {
-    const data = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`
+    const named = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`
+    // Also enqueue a default message event containing the type in the payload so
+    // clients that only listen to `onmessage` (default message) receive the
+    // notification. This keeps backward compatibility with consumers.
+    const defaultPayload = Object.assign({ type: event }, payload || {})
+    const message = `data: ${JSON.stringify(defaultPayload)}\n\n`
+
     for (const [, controller] of connections) {
         try {
-            controller.enqueue(data)
+            // send named event
+            controller.enqueue(named)
+        } catch (e) {
+            // swallow per-connection errors and continue
+        }
+        try {
+            // send default message with `type` included
+            controller.enqueue(message)
         } catch (e) {
             // swallow per-connection errors and continue
         }

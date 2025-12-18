@@ -6,12 +6,14 @@ type MessageHandler = (data: any) => void
 export default function useSSE(path: string, onMessage?: MessageHandler) {
     const [connected, setConnected] = useState(false)
     const evtSourceRef = useRef<EventSource | null>(null)
+    const [source, setSource] = useState<EventSource | null>(null)
 
     useEffect(() => {
         if (!path) return
         const url = path
         const es = new EventSource(url)
         evtSourceRef.current = es
+        setSource(es)
         setConnected(true)
 
         es.onmessage = (ev) => {
@@ -31,8 +33,9 @@ export default function useSSE(path: string, onMessage?: MessageHandler) {
         return () => {
             es.close()
             setConnected(false)
+            setSource(null)
         }
     }, [path])
 
-    return { connected, source: evtSourceRef.current }
+    return { connected, source }
 }
