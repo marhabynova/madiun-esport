@@ -160,3 +160,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Notes: SSE & Finalize flow
+
+- This project emits domain events (e.g., `match.finalized`) via a server-side event adapter. The SSE adapter sends both named events and a default `data` message which includes a `type` field for backward compatibility.
+- Clients subscribe to `/api/events/sse` using EventSource. The `useSSE` hook exposes the `EventSource` instance as `source` so components may register listeners for named events.
+- To handle clients where SSE cannot connect (e.g., proxies or limited environments), the UI falls back to polling `GET /api/match/[matchId]/status` until the match status becomes `COMPLETED`.
+- Finalization is implemented in the service layer (`services/match/finalizeMatch.service.ts`). Event delivery failures do not block finalization.
+
+Follow these docs when implementing clients or worker integrations to ensure consistent behavior.
