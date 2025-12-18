@@ -42,12 +42,34 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
-          SANITIZED="${DATABASE_URL}"
-          SANITIZED="${SANITIZED#\"}"
-          SANITIZED="${SANITIZED%\"}"
+          SANITIZED="${DATABASE_URL:-}"
+          # remove common wrappers like 'export DATABASE_URL=' or 'DATABASE_URL='
+          SANITIZED="${SANITIZED#export DATABASE_URL=}"
+          SANITIZED="${SANITIZED#DATABASE_URL=}"
+          # remove any trailing CR (from Windows-style secrets)
+          SANITIZED="$(printf "%s" "$SANITIZED" | tr -d '\r')"
+          # trim whitespace
           SANITIZED="$(printf "%s" "$SANITIZED" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          # strip surrounding single or double quotes if present
+          if [[ ${#SANITIZED} -ge 2 ]]; then
+            first="${SANITIZED:0:1}"
+            last="${SANITIZED: -1}"
+            if [[ "$first" == '"' || "$first" == "'" ]]; then
+              SANITIZED="${SANITIZED:1}"
+            fi
+            if [[ "$last" == '"' || "$last" == "'" ]]; then
+              SANITIZED="${SANITIZED:0:$((${#SANITIZED}-1))}"
+            fi
+          fi
+          # final trim (in case stripping added spaces)
+          SANITIZED="$(printf "%s" "$SANITIZED" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [[ -z "$SANITIZED" ]]; then
+            echo "ERROR: DATABASE_URL is empty after sanitization; update the repository secret 'DATABASE_URL' (no surrounding quotes or 'DATABASE_URL=' prefix)." >&2
+            exit 1
+          fi
           if [[ "$SANITIZED" != postgresql://* && "$SANITIZED" != postgres://* ]]; then
             echo "ERROR: DATABASE_URL format invalid. It must start with 'postgresql://' or 'postgres://'" >&2
+            echo "Current sanitized prefix: '${SANITIZED:0:12}...'" >&2
             exit 1
           fi
           (echo "SANITIZED_DATABASE_URL<<EOF"; printf '%s' "$SANITIZED"; echo; echo "EOF") >> "$GITHUB_ENV"
@@ -57,20 +79,20 @@ jobs:
           DATABASE_URL: ${{ env.SANITIZED_DATABASE_URL }}
         run: pnpm prisma:migrate
 
-      - name: Check DATABASE_URL
+      - name: Check SANITIZED_DATABASE_URL
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ env.SANITIZED_DATABASE_URL }}
         run: |
           if [ -z "${DATABASE_URL}" ]; then
-            echo "DATABASE_URL is empty; check environment secrets and protections"; exit 1
+            echo "SANITIZED_DATABASE_URL is empty; previous sanitization step failed"; exit 1
           else
-            echo "DATABASE_URL is set"
+            echo "SANITIZED_DATABASE_URL set (will be used for migrations)"
           fi
 
       - name: Post-migration smoke tests
         if: ${{ github.ref == 'refs/heads/staging' || github.event.inputs.run_smoke_tests == 'true' }}
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ env.SANITIZED_DATABASE_URL }}
         run: |
           echo "Running smoke tests"
           pnpm -s test
