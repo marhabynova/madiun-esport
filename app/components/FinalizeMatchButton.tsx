@@ -92,6 +92,43 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
         }
     }
 
+    // Polling fallback: if SSE not connected, poll status endpoint until completed
+    useEffect(() => {
+        if (status === 'COMPLETED') return
+        if (sse.connected) return
+
+        let mounted = true
+        let intervalId: number | null = null
+        const poll = async () => {
+            try {
+                const res = await fetch(`/api/match/${matchId}/status`)
+                if (!mounted) return
+                if (!res.ok) return
+                const json = await res.json()
+                const m = json?.match
+                if (m && m.status === 'COMPLETED') {
+                    setStatus('COMPLETED')
+                    setMessage('Match finalized (polled)')
+                    if (intervalId) {
+                        clearInterval(intervalId)
+                        intervalId = null
+                    }
+                }
+            } catch (e) {
+                // ignore network errors; will retry
+            }
+        }
+
+        // initial poll then interval
+        poll()
+        intervalId = window.setInterval(poll, 5000)
+
+        return () => {
+            mounted = false
+            if (intervalId) clearInterval(intervalId)
+        }
+    }, [sse.connected, matchId, status])
+
     return (
         <div>
             <div className="flex items-center gap-3">
