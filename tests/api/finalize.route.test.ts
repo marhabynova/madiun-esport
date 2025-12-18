@@ -13,6 +13,7 @@ jest.mock('../../services/match/finalizeMatch.service', () => ({
 }))
 
 import { POST } from '../../app/api/match/finalize/route'
+import { GET as GET_STATUS } from '../../app/api/match/[matchId]/status/route'
 import { finalizeMatch } from '../../services/match/finalizeMatch.service'
 
 describe('API route: POST /api/match/finalize', () => {
@@ -33,6 +34,13 @@ describe('API route: POST /api/match/finalize', () => {
         const res: any = await POST(req)
         expect(res.status).toBe(404)
         expect(res.body).toHaveProperty('error', 'no match')
+    })
+
+    it('status endpoint returns not found for unknown match', async () => {
+        const res = await GET_STATUS(new Request('https://example.test'), { params: { matchId: 'nope' } } as any)
+        const json = await res.json()
+        expect(res.status).toBe(404)
+        expect(json.error).toBeDefined()
     })
 
     test('maps AppError.Validation to 400', async () => {
