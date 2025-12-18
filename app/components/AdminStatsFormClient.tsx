@@ -5,7 +5,7 @@ import StatsForm, { StatDefinition } from './StatsForm'
 export default function AdminStatsFormClient({ stats, matchId }: { stats: StatDefinition[]; matchId: string }) {
     const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle')
 
-    async function handleSubmit(values: Record<string, any>) {
+    async function handleSubmit(values: Record<string, unknown>) {
         setStatus('submitting')
         try {
             const res = await fetch(`/api/admin/match/${matchId}/stats`, {
@@ -15,7 +15,7 @@ export default function AdminStatsFormClient({ stats, matchId }: { stats: StatDe
             })
             if (res.ok) setStatus('submitted')
             else setStatus('error')
-        } catch (e) {
+        } catch {
             setStatus('error')
         }
     }

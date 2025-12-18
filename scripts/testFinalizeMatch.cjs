@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // CommonJS runner to load TypeScript test with ts-node register
 try {
     require('dotenv/config')

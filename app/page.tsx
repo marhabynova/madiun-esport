@@ -1,65 +1,89 @@
-import Image from "next/image";
+import Skeleton from "./components/Skeleton";
+import EmptyState from "./components/EmptyState";
+import Link from "next/link";
+import { prisma } from "../lib/prisma";
 
-export default function Home() {
+export default async function Home() {
+  // Fetch data for dashboard sections
+  let liveMatch = null, upcoming = [], leaderboard = [], news = [];
+  let error = null;
+  try {
+    [liveMatch] = await prisma.match.findMany({ where: { status: "LIVE" }, orderBy: { scheduledAt: "asc" }, take: 1 });
+    upcoming = await prisma.match.findMany({ where: { status: "SCHEDULED" }, orderBy: { scheduledAt: "asc" }, take: 3 });
+    leaderboard = await prisma.team?.findMany?.({ orderBy: { createdAt: "desc" }, take: 5 }) || [];
+    news = await prisma.news?.findMany?.({ orderBy: { createdAt: "desc" }, take: 3 }) || [];
+  } catch (e) {
+    error = "Failed to load dashboard data";
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="max-w-3xl mx-auto p-6 flex flex-col gap-8 min-h-screen">
+      <h1 className="text-3xl font-bold mb-4">Madiun Esport Arena Dashboard</h1>
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Live Match</h2>
+        {error ? (
+          <EmptyState message={error} />
+        ) : !liveMatch ? (
+          <EmptyState message="No live match right now" />
+        ) : (
+          <Link href={`/matches/${liveMatch.id}`} className="block p-4 rounded bg-primary text-white font-semibold shadow-md">
+            {liveMatch.name || `Match ${liveMatch.id}`}
+          </Link>
+        )}
+      </section>
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Upcoming Matches</h2>
+        {error ? (
+          <EmptyState message={error} />
+        ) : upcoming.length === 0 ? (
+          <EmptyState message="No upcoming matches" />
+        ) : (
+          <ul className="space-y-2">
+            {upcoming.map((m) => (
+              <li key={m.id} className="p-3 rounded bg-white shadow border">
+                <Link href={`/matches/${m.id}`} className="font-medium text-blue-700 hover:underline">
+                  {m.name || `Match ${m.id}`}
+                </Link>
+                <div className="text-sm text-zinc-500">{m.scheduledAt ? new Date(m.scheduledAt).toLocaleString() : "TBA"}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Leaderboard</h2>
+        {error ? (
+          <EmptyState message={error} />
+        ) : leaderboard.length === 0 ? (
+          <EmptyState message="No leaderboard data" />
+        ) : (
+          <ul className="space-y-2">
+            {leaderboard.map((t) => (
+              <li key={t.id} className="p-3 rounded bg-white shadow border flex items-center gap-3">
+                <span className="font-semibold text-neutral-700">{t.name}</span>
+                <span className="ml-auto bg-accent text-white rounded px-2 py-1 text-xs">{t.slug}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section>
+        <h2 className="text-xl font-semibold mb-2">News</h2>
+        {error ? (
+          <EmptyState message={error} />
+        ) : news.length === 0 ? (
+          <EmptyState message="No news yet" />
+        ) : (
+          <ul className="space-y-2">
+            {news.map((n) => (
+              <li key={n.id} className="p-3 rounded bg-white shadow border">
+                <div className="font-medium">{n.title}</div>
+                <div className="text-sm text-zinc-500">{n.createdAt ? new Date(n.createdAt).toLocaleDateString() : ""}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
   );
 }

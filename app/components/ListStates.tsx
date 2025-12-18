@@ -1,20 +1,20 @@
 import React from 'react'
 
-type Props = {
+type Props<T> = {
     isLoading?: boolean
     isError?: string | boolean
-    items?: any[] | null
+    items?: T[] | null
     emptyMessage?: string
     children?: React.ReactNode
 }
 
-export default function ListStates({
+export default function ListStates<T>({
     isLoading,
     isError,
     items,
     emptyMessage = 'No items',
     children,
-}: Props) {
+}: Props<T>) {
     if (isLoading) {
         return <div className="p-4 text-center">Loading…</div>
     }

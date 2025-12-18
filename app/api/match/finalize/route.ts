@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { finalizeMatch } from '../../../../services/match/finalizeMatch.service'
-import { AppError } from '../../../../lib/errors'
+// AppError is available for tests; avoid unused import in runtime handler
+// (keep import commented for now to satisfy docs/tests when needed)
+// import { AppError } from '../../../../lib/errors'
 
 export async function POST(request: Request) {
     try {
@@ -24,21 +26,24 @@ export async function POST(request: Request) {
 
         await finalizeMatch(matchId, actorId, reason)
         return NextResponse.json({ ok: true })
-    } catch (err: any) {
-        // Map known AppError shapes (statusCode) to HTTP responses
-        if (err && typeof err.statusCode === 'number') {
-            const status = err.statusCode
-            const message = err.message || 'Error'
-            return NextResponse.json({ error: message }, { status })
+    } catch (err: unknown) {
+        if (typeof err === 'object' && err !== null) {
+            const e = err as Record<string, unknown>
+            if (typeof e.statusCode === 'number') {
+                const status = e.statusCode
+                const message = typeof e.message === 'string' ? e.message : 'Error'
+                return NextResponse.json({ error: message }, { status })
+            }
+
+            if (e.code === 'P2025') {
+                return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
+            }
+
+            if (typeof e.message === 'string') {
+                return NextResponse.json({ error: e.message }, { status: 500 })
+            }
         }
 
-        // Handle common Prisma 'not found' error code
-        if (err && err.code === 'P2025') {
-            return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
-        }
-
-        // Fallback
-        const msg = (err && err.message) || 'Internal server error'
-        return NextResponse.json({ error: msg }, { status: 500 })
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

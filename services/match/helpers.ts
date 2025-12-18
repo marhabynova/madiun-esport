@@ -1,5 +1,9 @@
 import type { Prisma, PrismaClient, Match } from '@prisma/client'
 
+type ModelLike = {
+    findMany?: (args?: unknown) => Promise<unknown[]>
+}
+
 // Helper implementations for finalize/revise flows.
 // These are intentionally simple and deterministic. Replace with full domain logic later.
 
@@ -10,21 +14,22 @@ export async function validateStatsForMatch(matchId: string, prisma: PrismaClien
     if (!match) return false
 
     // If StatDefinition model exists in schema, prefer validating against stat records
-    const hasStatDefinitionModel = typeof (client as any).statDefinition !== 'undefined'
+    const hasStatDefinitionModel = typeof (client as unknown as Record<string, unknown>).statDefinition !== 'undefined'
 
     // Helper: check dynamic stat models for any records related to this match
     const statModelNames = ['matchPlayerStats', 'matchTeamStats', 'matchExtra']
     let foundStatRecords = false
     for (const name of statModelNames) {
-        const model = (client as any)[name]
+        const modelCandidate = (client as unknown as Record<string, unknown>)[name]
+        const model = modelCandidate as ModelLike | undefined
         if (model && typeof model.findMany === 'function') {
             try {
-                const recs = await model.findMany({ where: { matchId } })
-                if (recs && recs.length > 0) {
+                const recs = await model.findMany?.({ where: { matchId } })
+                if (Array.isArray(recs) && recs.length > 0) {
                     foundStatRecords = true
                     break
                 }
-            } catch (e) {
+            } catch {
                 // ignore model-specific errors and continue
             }
         }

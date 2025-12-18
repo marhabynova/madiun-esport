@@ -1,9 +1,10 @@
 
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-import { finalizeMatch } from '../services/match/finalizeMatch.service'
+import type { Prisma } from '@prisma/client'
+import { finalizeMatch } from '../services/match/finalizeMatch.service.ts'
 
-const prisma = new PrismaClient({ errorFormat: 'pretty', __internal: { engine: { type: 'library' } } } as any)
+const prisma = new PrismaClient({ errorFormat: 'pretty', __internal: { engine: { type: 'library' } } } as unknown as Prisma.PrismaClientOptions)
 
 async function main() {
     // Ensure at least one game exists

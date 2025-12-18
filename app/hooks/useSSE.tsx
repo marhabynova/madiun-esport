@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from 'react'
 
-type MessageHandler = (data: any) => void
+type MessageHandler = (data: unknown) => void
 
 export default function useSSE(path: string, onMessage?: MessageHandler) {
     const [connected, setConnected] = useState(false)
@@ -13,14 +13,17 @@ export default function useSSE(path: string, onMessage?: MessageHandler) {
         const url = path
         const es = new EventSource(url)
         evtSourceRef.current = es
-        setSource(es)
-        setConnected(true)
+        // update state asynchronously to avoid sync state updates inside effect
+        Promise.resolve().then(() => {
+            setSource(es)
+            setConnected(true)
+        })
 
-        es.onmessage = (ev) => {
+        es.onmessage = (ev: MessageEvent) => {
             try {
                 const data = JSON.parse(ev.data)
                 onMessage?.(data)
-            } catch (e) {
+            } catch {
                 onMessage?.(ev.data)
             }
         }
@@ -35,7 +38,7 @@ export default function useSSE(path: string, onMessage?: MessageHandler) {
             setConnected(false)
             setSource(null)
         }
-    }, [path])
+    }, [path, onMessage])
 
     return { connected, source }
 }

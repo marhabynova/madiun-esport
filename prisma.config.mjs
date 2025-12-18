@@ -1,5 +1,5 @@
 // Prisma v7 configuration (ESM)
-export default {
+const config = {
     datasources: {
         db: {
             provider: 'postgresql',
@@ -13,3 +13,5 @@ export default {
         },
     },
 }
+
+export default config

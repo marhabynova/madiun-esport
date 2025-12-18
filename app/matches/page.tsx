@@ -1,22 +1,38 @@
-import { prisma } from '../../lib/prisma'
-import ListStates from '../components/ListStates'
+import { Suspense } from "react";
+import { prisma } from '../../lib/prisma';
+import ListStates from '../components/ListStates';
+import Skeleton from '../components/Skeleton';
+import type { Match } from '@prisma/client';
 
-export default async function Page() {
-    const matches = await prisma.match.findMany({ take: 20, orderBy: { createdAt: 'desc' } })
+async function MatchesList() {
+    let matches = [];
+    let error = null;
+    try {
+        matches = await prisma.match.findMany({ take: 20, orderBy: { createdAt: 'desc' } });
+    } catch (e) {
+        error = 'Failed to load matches';
+    }
+    return (
+        <ListStates isError={error} items={matches} emptyMessage="No matches found">
+            <ul className="space-y-3">
+                {matches.map((m: Match) => (
+                    <li key={m.id} className="p-3 border rounded bg-white">
+                        <div className="font-medium">{m.name ?? `Match ${m.id}`}</div>
+                        <div className="text-sm text-zinc-500">Status: {m.status}</div>
+                    </li>
+                ))}
+            </ul>
+        </ListStates>
+    );
+}
 
+export default function Page() {
     return (
         <main className="max-w-3xl mx-auto p-6">
             <h1 className="text-2xl font-semibold mb-4">Matches</h1>
-            <ListStates items={matches} emptyMessage="No matches found">
-                <ul className="space-y-3">
-                    {matches.map((m: any) => (
-                        <li key={m.id} className="p-3 border rounded bg-white">
-                            <div className="font-medium">{m.name ?? `Match ${m.id}`}</div>
-                            <div className="text-sm text-zinc-500">Status: {m.status}</div>
-                        </li>
-                    ))}
-                </ul>
-            </ListStates>
+            <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                <MatchesList />
+            </Suspense>
         </main>
-    )
+    );
 }

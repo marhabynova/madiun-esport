@@ -8,11 +8,16 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState<string | null>(null)
 
-    const onMessage = useCallback((data: any) => {
+    type SSEPayload = { type?: string; matchId?: string } & Record<string, unknown>
+
+    const onMessage = useCallback((data: unknown) => {
         if (!data) return
-        if (data.type === 'match.finalized' && data.matchId === matchId) {
-            setStatus('COMPLETED')
-            setMessage('Match finalized')
+        if (typeof data === 'object' && data !== null) {
+            const d = data as SSEPayload
+            if (d.type === 'match.finalized' && d.matchId === matchId) {
+                setStatus('COMPLETED')
+                setMessage('Match finalized')
+            }
         }
     }, [matchId])
 
@@ -29,7 +34,7 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
             try {
                 const data = JSON.parse(ev.data)
                 onMessage?.(data)
-            } catch (e) {
+            } catch {
                 onMessage?.(ev.data)
             }
         }
@@ -43,7 +48,7 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
             try {
                 sse.source?.removeEventListener('match.finalized', handler as EventListener)
                 sse.source?.removeEventListener('message', handler as EventListener)
-            } catch (e) {
+            } catch {
                 // ignore cleanup errors
             }
         }
@@ -57,7 +62,7 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
         setMessage(null)
         try {
             const actorId = typeof window !== 'undefined' ? localStorage.getItem('actorId') : null
-            const headers: any = { 'Content-Type': 'application/json' }
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' }
             if (actorId) headers['x-actor-id'] = actorId
             // if FINALIZE_AUTH_TOKEN present, client can put it in localStorage as 'finalizeToken'
             const token = typeof window !== 'undefined' ? localStorage.getItem('finalizeToken') : null
@@ -70,23 +75,33 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
             })
 
             // Try to parse JSON error body safely
-            let json: any = null
+            let json: unknown = null
             try {
                 json = await res.json()
-            } catch (e) {
+            } catch {
                 // ignore non-json response
             }
 
             if (!res.ok) {
-                const errMsg = (json && (json.error || json.message)) || `Request failed (${res.status})`
+                let errMsg = `Request failed (${res.status})`
+                if (json && typeof json === 'object') {
+                    const j = json as Record<string, unknown>
+                    if (typeof j.error === 'string') errMsg = j.error
+                    else if (typeof j.message === 'string') errMsg = j.message
+                }
                 throw new Error(errMsg)
             }
 
             // success
             setStatus('COMPLETED')
             setMessage('Finalized')
-        } catch (err: any) {
-            setMessage(err?.message || 'Error')
+        } catch (err: unknown) {
+            let msg = 'Error'
+            if (typeof err === 'object' && err !== null) {
+                const e = err as Record<string, unknown>
+                if (typeof e.message === 'string') msg = e.message
+            }
+            setMessage(msg)
         } finally {
             setLoading(false)
         }
@@ -114,7 +129,7 @@ export default function FinalizeMatchButton({ matchId, initialStatus }: { matchI
                         intervalId = null
                     }
                 }
-            } catch (e) {
+            } catch {
                 // ignore network errors; will retry
             }
         }

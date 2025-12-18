@@ -5,7 +5,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import StatsForm from '../app/components/StatsForm'
+import StatsForm, { StatDefinition } from '../app/components/StatsForm'
 
 describe('StatsForm UI', () => {
     test('renders inputs and submits values', async () => {
@@ -18,7 +18,7 @@ describe('StatsForm UI', () => {
         const user = userEvent.setup()
         const onSubmit = jest.fn()
 
-        render(<StatsForm stats={stats as any} onSubmit={onSubmit} />)
+        render(<StatsForm stats={stats as unknown as StatDefinition[]} onSubmit={onSubmit} />)
 
         // fill number (spinbutton role)
         const kills = screen.getByRole('spinbutton') as HTMLInputElement

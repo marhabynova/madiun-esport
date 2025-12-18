@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+require('@prisma/client')
 const prisma = require('../lib/prisma')
 
 async function main() {
