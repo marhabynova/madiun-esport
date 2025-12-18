@@ -1,0 +1,16 @@
+[Unit]
+Description=MADIRA Submissions Worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/madira-web
+Environment=NODE_ENV=production
+Environment=PROCESS_SUBMISSIONS_INTERVAL_MS=60000
+ExecStart=/usr/bin/node scripts/workerProcess.cjs
+Restart=on-failure
+RestartSec=5s
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

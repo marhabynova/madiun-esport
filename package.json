@@ -1,0 +1,49 @@
+{
+  "name": "madira-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test:finalize": "node -r ts-node/register/transpile-only scripts/testFinalizeMatch.ts",
+    "test:unit": "jest --passWithNoTests",
+    "test": "jest --runInBand --passWithNoTests",
+    "prisma:generate": "prisma generate",
+    "prisma:dbpush": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "seed": "node prisma/seed.js",
+    "process:submissions": "node scripts/processAuditSubmissions.cjs",
+    "worker:submissions": "node scripts/workerProcess.cjs",
+    "pm2:start-worker": "pm2 start pm2.ecosystem.config.js --only madira-worker-submissions",
+    "pm2:stop-worker": "pm2 stop madira-worker-submissions || true",
+    "pm2:restart-worker": "pm2 restart madira-worker-submissions || true"
+  },
+  "dependencies": {
+    "@prisma/client": "^4.15.0",
+    "next": "16.0.10",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "jest-environment-jsdom": "^28.1.1",
+    "@types/jest": "^29.5.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "jest": "^29.6.0",
+    "jest-environment-node": "^29.6.0",
+    "prisma": "^4.15.0",
+    "tailwindcss": "^4",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}

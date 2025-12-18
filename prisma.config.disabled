@@ -1,0 +1,2 @@
+// Backup of prisma.config.js — temporarily disabled to avoid Prisma CLI parse issues.
+module.exports = require('./prisma.cli.config.cjs')

@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+model Game {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tournament {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  status    String
+  gameId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Match {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  stageId     String
+  tournamentId String
+  status      String
+  scheduledAt DateTime?
+  scoreA      Int?
+  scoreB      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Revision {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  payload    Json
+  actorId    String?
+  reason     String?
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entityType String
+  entityId  String
+  actorId   String?
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+
+model LeaderboardAggregate {
+  id           String   @id @default(cuid())
+  tournamentId String   @unique
+  payload      Json
+  updatedAt    DateTime @updatedAt
+}
+
+model StandingAggregate {
+  id        String   @id @default(cuid())
+  stageId   String   @unique
+  payload   Json
+  updatedAt DateTime @updatedAt
+}
+
+// Optional stat models — used when StatDefinition exists and detailed stats are stored
+model MatchPlayerStats {
+  id        String   @id @default(cuid())
+  matchId   String
+  playerId  String
+  stats     Json
+  createdAt DateTime @default(now())
+}
+
+model MatchTeamStats {
+  id        String   @id @default(cuid())
+  matchId   String
+  teamId    String
+  stats     Json
+  createdAt DateTime @default(now())
+}
+
+model MatchExtra {
+  id        String   @id @default(cuid())
+  matchId   String
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model StatDefinition {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  type      String
+  required  Boolean  @default(false)
+  meta      Json?
+  createdAt DateTime @default(now())
+}
